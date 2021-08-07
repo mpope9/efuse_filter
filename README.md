@@ -5,17 +5,23 @@ They're faster and smaller than Bloom, Cuckoo, and Xor filters.
 
 This library is API compatible with the [exor_filter](https://github.com/mpope9/exor_filter) library, and can be used as a replacement without too much hassle.
 
-Table Of Contents
-====
+## Table Of Contents
+* [Benchmarks](#benchmarks)
+* [Installation](#installation)
+* [Example Usage](#example-usage)
+   * [Basic Usage](#basic-usage)
+   * [Elixir Example](#elixir-example)
+   * [Incremental Initialization](#incremental-initialization)
+* [Custom Return Values](#custom-return-values)
+* [Custom Hashing](#custom-hashing)
+* [Serialization](#serialization)
 
-Benchmarks
-====
+## Benchmarks
 ![Benchmark Graph](/images/results.png)
 
 This was benchmarked with the [exor_benchmark](https://github.com/mpope9/exor_bechmark) suite that compares several Erlang and Elixir bloom / xor / fuse filter implementations. The full benchmark and results can be found there.
 
-Installation
-====
+## Installation
 
 This library requires Erlang version 24+.
 
@@ -43,14 +49,25 @@ defp deps do
 end
 ```
 
-Example Usage
-====
+## Example Usage
 
 ### Basic Usage
 ```erlang
 Filter = fuse8:new(["cat", "dog", "mouse"]),
 true = fuse8:contain(Filter, "cat"),
 false = fuse8:contain(Filter, "goose").
+```
+
+### Elixir Example
+```Elixir
+alias :fuse8 as: Fuse8
+
+# ...
+
+true =
+    [1, 2, 3, 4]
+    |> Fuse8.new()
+    |> Fuse8.contain(1)
 ```
 
 ### Incremental Initialization
@@ -65,8 +82,7 @@ true = fuse8:contain(Filter3, 1),
 false = fuse8:contain(Filter3, 5).
 ```
 
-Custom Return Values
-====
+## Custom Return Values
 `fuse8:contain/3` can return a custom value instead of `false` if the required item isn't present in the filter:
 
 ```erlang
@@ -75,8 +91,16 @@ true = fuse8:contain(Filter, "Ricky Bobby", {error, not_found}),
 {error, not_found} = fuse8:contain(Filter, "Reese Bobby", {error, not_found}).
 ```
 
-Serialization
-====
+## Custom Hashing
+By default this library uses the [`erlang:phash2/1`](https://erlang.org/doc/man/erlang.html#phash2-1) function. If you want to use your own custom hashing, pass `none` to the `fuse8:new/2` function. Values passed to `fuse8:contain/2` need to be pre-hashed as well.
+
+```erlang
+PreHashedList = [...],
+Filter = fuse8:new(PreHashedList, none),
+true = fuse8:contain(Filter, hd(PreHashedList)).
+```
+
+## Serialization
 Functions are provided to the filter in binary form, instead of a nif reference. This can be useful to interop with other platforms / systems. The bin returned can be used with `fuse:contain` for ease of use. Example usage:
 
 ```erlang

@@ -32,10 +32,14 @@
 %%-----------------------------------------------------------------------------
 %% @doc Initializes the fuse filter
 %%
-%% Returns a {`Ref<>', hash_method} to a filter to be used in `contain'
-%% if a predefined hash function is specified.
+%% Initializes a fuse8 filter frim the passed values. Each value is hashed
+%% using the `erlang:phash2/1' function.
 %%
-%% Otherwise, an `{error, reason}' be returned.
+%% Returns a fuse8 type, which is a filter to be used in `contain'
+%% If a predefined set of hashes is desired, pass `none' as the second
+%% argument.
+%%
+%% Otherwise, an `{error, reason}' tuple will be returned.
 %% @end
 %%-----------------------------------------------------------------------------
 -spec new(List::[term()]) -> fuse8:fuse8() | {error, atom()}.
@@ -58,7 +62,7 @@ new(List) when is_list(List) ->
 
 -spec new(List::[term()], atom()) -> fuse8:fuse8() | {error, atom()}.
 
-new(List, none) ->
+new(List, none) when is_list(List) ->
 
     Set = lists:foldl(
         fun (Element, Set) ->
@@ -67,22 +71,57 @@ new(List, none) ->
 
     DedupedList = sets:to_list(Set),
 
-    FilterFun = case over_100k(List) of
-        true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
-        false -> fun efuse_filter:fuse8_initialize_nif/1
-    end,
-    #fuse8{reference = FilterFun(DedupedList), hashing_method = none}.
+    AllInts = lists:any(fun(Val) -> is_integer(Val) end, DedupedList),
+
+    case AllInts of
+
+        false ->
+            {error, pre_hashed_values_should_be_ints};
+
+        true ->
+
+            FilterFun = case over_100k(List) of
+                true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
+                false -> fun efuse_filter:fuse8_initialize_nif/1
+            end,
+            #fuse8{reference = FilterFun(DedupedList), hashing_method = none}
+    end;
+
+new(_List, _Method) ->
+    {error, invalid_hash_method}.
 
 
--spec contain(fuse8:fuse8(), term()) -> boolean().
+%%-----------------------------------------------------------------------------
+%% @doc Tests to see if the passed argument is in the filter.  The first
+%% argument must be the pre-initialized filter. Returns `false' if the
+%% argument is not found.
+%%
+%% A filter previously serialized by `to_bin' is allowed
+%% @end
+%%-----------------------------------------------------------------------------
+-spec contain(Filter::fuse8:fuse8(), Key::term()) -> boolean().
 
 contain(Filter, Key) ->
     contain(Filter, Key, false).
 
 
--spec contain(fuse8:fuse8(), term(), term()) -> boolean().
+%%-----------------------------------------------------------------------------
+%% @doc Tests to see if the passed argument is in the filter.  The first
+%% argument must be the pre-initialized filter. If the value is not found,
+%% the third arguement is returned instead of `false'.
+%%
+%% A filter previously serialized by `to_bin' is allowed
+%% @end
+%%-----------------------------------------------------------------------------
+-spec contain(Filter::fuse8:fuse8(), Key::term(), Default::term()) -> boolean().
 
-contain(#fuse8{reference = Filter, hashing_method = none}, Key, Default) ->
+contain(#fuse8{hashing_method = none}, Key, _Default)
+    when not is_integer(Key) ->
+
+    {error, bad_key};
+
+contain(#fuse8{reference = Filter, hashing_method = none}, Key, Default)
+    when is_integer(Key) ->
 
     case efuse_filter:fuse8_contain_nif(Filter, Key) of
         true -> true;
@@ -94,7 +133,10 @@ contain(#fuse8{reference = Filter, hashing_method = default_hash}, Key, Default)
     case efuse_filter:fuse8_contain_nif(Filter, erlang:phash2(Key)) of
         true -> true;
         false -> Default
-    end.
+    end;
+
+contain(_Filter, _Key, _Default) ->
+    {error, bad_filter}.
 
 
 -spec over_100k(List::[term()]) -> boolean().
