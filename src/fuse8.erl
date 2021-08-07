@@ -29,7 +29,7 @@ new(List) when is_list(List) ->
 
     HashedList = sets:to_list(HashedSet),
 
-    FilterFun = case over_10k(HashedList) of
+    FilterFun = case over_100k(HashedList) of
         true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
         false -> fun efuse_filter:fuse8_initialize_nif/1
     end,
@@ -43,7 +43,7 @@ new(List, none) ->
         end, sets:new([{version, 2}]), List),
 
     HashedList = sets:to_list(HashedSet),
-    FilterFun = case over_10k(List) of
+    FilterFun = case over_100k(List) of
         true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
         false -> fun efuse_filter:fuse8_initialize_nif/1
     end,
@@ -68,9 +68,9 @@ contain({Filter, default_hash}, Key, Default) ->
     end.
 
 
-over_10k(List) ->
-    over_10k(List, 0).
+over_100k(List) ->
+    over_100k(List, 0).
 
-over_10k(_List, 10_001) -> true;
-over_10k([], Count) when Count < 10_001 -> false;
-over_10k([_|L], Count) -> over_10k(L, Count + 1).
+over_100k(_List, 10_001) -> true;
+over_100k([], Count) when Count < 100_001 -> false;
+over_100k([_|L], Count) -> over_100k(L, Count + 1).
