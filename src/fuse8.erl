@@ -21,7 +21,12 @@
 
 new(List) when is_list(List) ->
 
-    HashedList = lists:map(fun erlang:phash2/1, List),
+    HashedSet = lists:foldl(
+        fun (Element, Set) ->
+            sets:add_element(erlang:phash2(Element), Set)
+        end, sets:new([{version, 2}]), List),
+
+    HashedList = sets:to_list(HashedSet),
 
     FilterFun = case over_10k(HashedList) of
         true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
