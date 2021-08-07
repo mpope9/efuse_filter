@@ -10,6 +10,42 @@ Table Of Contents
 
 Benchmarks
 ====
+![Benchmark Graph](/images/results.png)
+
+Breif benchmark snippet:
+```
+Operating System: macOS
+CPU Information: Intel(R) Core(TM) i5-7267U CPU @ 3.10GHz
+Number of Available Cores: 4
+Available memory: 8 GB
+Elixir 1.12.2
+Erlang 24.0.5
+
+##### With input 10,000 Inputs #####
+Name                   ips        average  deviation         median         99th %
+fuse8 1k            749.31        1.33 ms     ±3.17%        1.33 ms        1.49 ms
+fuse8 100k          746.83        1.34 ms     ±2.79%        1.33 ms        1.48 ms
+fuse8 8 1M          700.22        1.43 ms     ±4.68%        1.42 ms        1.74 ms
+xor8 100k           684.07        1.46 ms     ±3.21%        1.45 ms        1.66 ms
+xor8 1k             674.74        1.48 ms     ±3.15%        1.47 ms        1.63 ms
+fuse8 8 10M         636.23        1.57 ms    ±13.44%        1.52 ms        2.74 ms
+xor8 8 1M           598.47        1.67 ms    ±45.72%        1.54 ms        4.95 ms
+xor8 8 10M          591.64        1.69 ms     ±8.51%        1.64 ms        2.44 ms
+Bloomex 1k          362.02        2.76 ms     ±2.78%        2.75 ms        3.09 ms
+xor16 1M            325.59        3.07 ms     ±2.58%        3.06 ms        3.44 ms
+
+Comparison:
+fuse8 1k            749.31
+fuse8 100k          746.83 - 1.00x slower +0.00443 ms
+fuse8 8 1M          700.22 - 1.07x slower +0.0936 ms
+xor8 100k           684.07 - 1.10x slower +0.127 ms
+xor8 1k             674.74 - 1.11x slower +0.147 ms
+fuse8 8 10M         636.23 - 1.18x slower +0.24 ms
+xor8 8 1M           598.47 - 1.25x slower +0.34 ms
+xor8 8 10M          591.64 - 1.27x slower +0.36 ms
+Bloomex 1k          362.02 - 2.07x slower +1.43 ms
+xor16 1M            325.59 - 2.30x slower +1.74 ms
+```
 
 Installation
 ====
