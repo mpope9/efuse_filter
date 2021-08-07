@@ -1,0 +1,14 @@
+{application, efuse_filter,
+    [{description, "NIF Wrapper For Binary Fuse Filters"},
+    {vsn, "0.1.0"},
+    {registered, []},
+    {applications,
+        [kernel,
+        stdlib
+        ]},
+    {env,[]},
+    {modules, []},
+
+    {licenses, ["Apache 2.0"]},
+    {links, [{"GitHub", "https://github.com/mpope9/efuse_filter"}]}
+]}.
