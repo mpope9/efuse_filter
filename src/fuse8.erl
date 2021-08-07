@@ -15,6 +15,7 @@
 
 -export([
     new/1,
+    new/2,
     contain/2,
     contain/3
 ]).
@@ -34,9 +35,24 @@ new(List) when is_list(List) ->
     end,
     {FilterFun(HashedList), default_hash}.
 
+new(List, none) when is_list(List) ->
 
-contain({Filter, default_hash}, Key) ->
-    contain({Filter, default_hash}, Key, false).
+    FilterFun = case over_10k(List) of
+        true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
+        false -> fun efuse_filter:fuse8_initialize_nif/1
+    end,
+    {FilterFun(List), none}.
+
+
+contain(Filter, Key) ->
+    contain(Filter, Key, false).
+
+contain({Filter, none}, Key, Default) ->
+
+    case efuse_filter:fuse8_contain_nif(Filter, Key) of
+        true -> true;
+        false -> Default
+    end;
 
 contain({Filter, default_hash}, Key, Default) ->
 
