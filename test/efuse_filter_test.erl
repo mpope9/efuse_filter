@@ -13,7 +13,8 @@ basic_test_() ->
         {
             "fuse8 Test Group",
             [
-                ?_test(fuse8_filter())
+                ?_test(fuse8_filter()),
+                ?_test(fuse8_filter_no_hash())
             ]
         }
     ].
@@ -22,3 +23,8 @@ fuse8_filter() ->
    Filter = fuse8:new(["test1", "test2", "test3"]),
    ?assertEqual(true, fuse8:contain(Filter, "test1")),
    ?assertEqual(false, fuse8:contain(Filter, "test4")).
+
+fuse8_filter_no_hash() ->
+    Filter = fuse8:new([1, 2, 3]),
+    ?assertEqual(true, fuse8:contain(Filter, 1)),
+    ?assertEqual(false, fuse8:contain(Filter, 4)).

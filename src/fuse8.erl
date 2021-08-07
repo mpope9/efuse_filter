@@ -35,8 +35,14 @@ new(List) when is_list(List) ->
     end,
     {FilterFun(HashedList), default_hash}.
 
-new(List, none) when is_list(List) ->
+new(List, none) ->
 
+    HashedSet = lists:foldl(
+        fun (Element, Set) ->
+            sets:add_element(Element, Set)
+        end, sets:new([{version, 2}]), List),
+
+    HashedList = sets:to_list(HashedSet),
     FilterFun = case over_10k(List) of
         true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
         false -> fun efuse_filter:fuse8_initialize_nif/1
