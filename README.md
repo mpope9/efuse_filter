@@ -12,6 +12,8 @@ Benchmarks
 ====
 ![Benchmark Graph](/images/results.png)
 
+This was benchmarked with the [exor_benchmark](https://github.com/mpope9/exor_bechmark) suite that compares several Erlang and Elixir bloom / xor / fuse filter implementations.
+
 Breif benchmark snippet:
 ```
 Operating System: macOS
