@@ -3,6 +3,9 @@
 %% @author Matthew Pope
 %% @doc Interface for the fuse8 filter.
 %%
+%% For a full set of examples, see the GitHub README at 
+%%  https://github.com/mpope9/efuse_filter/blob/main/README.md
+%%
 %% Example usage:
 %% ```
 %% Filter = fuse8:new(["cat", "dog", "mouse"]),
@@ -16,13 +19,18 @@
 -export([
     new/1,
     new/2,
+    new_empty/0,
+    new_empty/1,
     contain/2,
-    contain/3
+    contain/3,
+    add/2,
+    finalize/1
 ]).
 
 -record(fuse8, {
-    reference :: reference(), 
-    hashing_method :: default_hash | none | fun((term()) -> non_neg_integer())
+    reference :: reference() | undefined,
+    hashing_method :: default | none,
+    elements :: set:set() | undefined
 }).
 
 -type fuse8() :: #fuse8{}.
@@ -40,6 +48,8 @@
 %% argument.
 %%
 %% Otherwise, an `{error, reason}' tuple will be returned.
+%%
+%% Do not modify the return value of this function.
 %% @end
 %%-----------------------------------------------------------------------------
 -spec new(List::[term()]) -> fuse8:fuse8() | {error, atom()}.
@@ -57,7 +67,10 @@ new(List) when is_list(List) ->
         true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
         false -> fun efuse_filter:fuse8_initialize_nif/1
     end,
-    #fuse8{reference = FilterFun(HashedList), hashing_method = default_hash}.
+    #fuse8{
+        reference = FilterFun(HashedList), 
+        hashing_method = default,
+        elements = undefined}.
 
 
 -spec new(List::[term()], atom()) -> fuse8:fuse8() | {error, atom()}.
@@ -84,10 +97,47 @@ new(List, none) when is_list(List) ->
                 true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
                 false -> fun efuse_filter:fuse8_initialize_nif/1
             end,
-            #fuse8{reference = FilterFun(DedupedList), hashing_method = none}
+            #fuse8{
+                reference = FilterFun(DedupedList),
+                hashing_method = none,
+                elements = undefined}
     end;
 
 new(_List, _Method) ->
+    {error, invalid_hash_method}.
+
+
+%%-----------------------------------------------------------------------------
+%% @doc Initializes an empty filter. This should be filled incrementally.
+%% @end
+%%-----------------------------------------------------------------------------
+-spec new_empty() -> fuse8:fuse8().
+
+new_empty() ->
+    #fuse8{
+        reference = undefined,
+        hashing_method = default,
+        elements = sets:new([{version, 2}])
+    }.
+
+
+%%-----------------------------------------------------------------------------
+%% @doc Initializes an empty filter. This should be filled incrementally.
+%% If a value other than `none' is passed, then `{error, invalid_hash_method}'
+%% will be returned. Values passed to `fuse8:add/2' need to be pre-hashed as
+%% integers before adding to a filter returned by this function.
+%% @end
+%%-----------------------------------------------------------------------------
+-spec new_empty(atom()) -> fuse8:fuse8() | {error, atom()}.
+
+new_empty(none) ->
+    #fuse8{
+        reference = undefined,
+        hashing_method = none,
+        elements = sets:new([{version, 2}])
+    };
+
+new_empty(_) ->
     {error, invalid_hash_method}.
 
 
@@ -111,6 +161,10 @@ contain(Filter, Key) ->
 %% the third arguement is returned instead of `false'.
 %%
 %% A filter previously serialized by `to_bin' is allowed
+%%
+%% If an invalid filter is passed or if the key is not an integer and the 
+%% hashing method is set to `none' then false will be returned.
+%%
 %% @end
 %%-----------------------------------------------------------------------------
 -spec contain(Filter::fuse8:fuse8(), Key::term(), Default::term()) -> boolean().
@@ -118,7 +172,12 @@ contain(Filter, Key) ->
 contain(#fuse8{hashing_method = none}, Key, _Default)
     when not is_integer(Key) ->
 
-    {error, bad_key};
+    false;
+
+contain(#fuse8{reference = Filter}, _Key, _Default)
+    when Filter == undefined ->
+
+    false;
 
 contain(#fuse8{reference = Filter, hashing_method = none}, Key, Default)
     when is_integer(Key) ->
@@ -128,7 +187,7 @@ contain(#fuse8{reference = Filter, hashing_method = none}, Key, Default)
         false -> Default
     end;
 
-contain(#fuse8{reference = Filter, hashing_method = default_hash}, Key, Default) ->
+contain(#fuse8{reference = Filter, hashing_method = default}, Key, Default) ->
 
     case efuse_filter:fuse8_contain_nif(Filter, erlang:phash2(Key)) of
         true -> true;
@@ -136,7 +195,96 @@ contain(#fuse8{reference = Filter, hashing_method = default_hash}, Key, Default)
     end;
 
 contain(_Filter, _Key, _Default) ->
-    {error, bad_filter}.
+    false.
+
+
+%%-----------------------------------------------------------------------------
+%% @doc Adds elements to filter, and applys the default hashing mechanism if
+%% `none' wasn't specified in the `fuse8:new_empty/1' function. This function
+%% attempts to catch issues early, before they reach the NIF code. So if
+%% any elements that are passed when custom hashing was specified this 
+%% function will return `{error, pre_hashed_values_should_be_ints}'.
+%%
+%% This function accepts both a list of elements and a single element.
+%% @end
+%%-----------------------------------------------------------------------------
+-spec add(Filter::fuse8:fuse8(), Element::term()) -> fuse8:fuse8() | {error, atom()}.
+
+add(#fuse8{reference = Reference}, _Elements) when Reference /= undefined ->
+    {error, already_initialized_filter};
+
+add(#fuse8{elements = undefined}, _Elements) ->
+    {error, uninitialized_filter};
+
+add(#fuse8{hashing_method = default, elements = Elements} = Filter, ElementsInput) 
+    when is_list(ElementsInput) ->
+
+    ElementsNew = lists:foldl(
+        fun(Element, Acc) ->
+            sets:add_element(erlang:phash2(Element), Acc)
+        end, Elements, ElementsInput),
+
+    Filter#fuse8{elements = ElementsNew};
+
+add(#fuse8{hashing_method = default, elements = Elements} = Filter, Element) ->
+    Filter#fuse8{elements = sets:add_element(erlang:phash2(Element), Elements)};
+
+add(#fuse8{hashing_method = none, elements = Elements} = Filter, ElementsInput) 
+    when is_list(ElementsInput) ->
+
+    case lists:any(fun(Val) -> is_integer(Val) end, ElementsInput) of
+
+        false ->
+            {error, pre_hashed_values_should_be_ints};
+
+        true ->
+
+            ElementsNew = lists:foldl(
+                fun(Element, Acc) ->
+                    sets:add_element(Element, Acc)
+                end, Elements, ElementsInput),
+            Filter#fuse8{elements = ElementsNew}
+
+    end;
+
+add(#fuse8{hashing_method = none, elements = Elements} = Filter, Element) ->
+
+    case is_integer(Element) of
+
+        false ->
+            {error, pre_hashed_values_should_be_ints};
+
+        true ->
+            Filter#fuse8{elements = sets:add_element(Element, Elements)}
+    end.
+
+%%-----------------------------------------------------------------------------
+%% @doc Initializes filter internally. Equivalent to calling `fuse8:new'.
+%% Elements are deduplicated at this point, so this function should only fail
+%% if an already intiialized filter is passed to it.
+%%
+%% If more than 100K elements have been added, then the dirty version of the 
+%% NIF is called. This is based around some simple benchmarking, and 
+%% 100K elements initialized in under 1ms.
+%% @end
+%%-----------------------------------------------------------------------------
+finalize(#fuse8{reference = Reference}) when Reference /= undefined ->
+    {error, already_initialized_filter};
+
+finalize(#fuse8{elements = undefined}) ->
+    {error, invalid_state_error};
+
+finalize(#fuse8{elements = Elements} = Filter) ->
+
+    List = sets:to_list(Elements),
+    FilterFun = case over_100k(List) of
+        true -> fun efuse_filter:fuse8_initialize_nif_dirty/1;
+        false -> fun efuse_filter:fuse8_initialize_nif/1
+    end,
+    Filter#fuse8{
+        reference = FilterFun(List),
+        elements = undefined
+    }.
 
 
 -spec over_100k(List::[term()]) -> boolean().
