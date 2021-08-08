@@ -33,7 +33,9 @@
 -export([
     fuse8_initialize_nif_dirty/1,
     fuse8_initialize_nif/1,
-    fuse8_contain_nif/2
+    fuse8_contain_nif/2,
+    fuse8_to_bin_nif/1,
+    fuse8_from_bin_nif/1
 ]).
 
 -on_load(init/0).
@@ -48,6 +50,12 @@ fuse8_initialize_nif(_) ->
    not_loaded(?LINE).
 
 fuse8_contain_nif(_, _) ->
+   not_loaded(?LINE).
+
+fuse8_to_bin_nif(_) ->
+   not_loaded(?LINE).
+
+fuse8_from_bin_nif(_) ->
    not_loaded(?LINE).
 
 init() ->

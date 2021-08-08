@@ -26,7 +26,8 @@ basic_test_() ->
                 ?_test(fuse8_double_finalize()),
                 ?_test(fuse8_incremental_custom_hash_bad_key()),
                 ?_test(fuse8_finalize_on_new()),
-                ?_test(fuse8_incremental_invalid_hash())
+                ?_test(fuse8_incremental_invalid_hash()),
+                ?_test(fuse8_serialization())
             ]
         }
     ].
@@ -100,3 +101,14 @@ fuse8_finalize_on_new() ->
 
 fuse8_incremental_invalid_hash() ->
     ?assertEqual(fuse8:new_empty(invalid), {error, invalid_hash_method}).
+
+fuse8_serialization() ->
+    Filter0 = fuse8:new([1, 2, 3, 4]),
+
+    Bin0 = fuse8:to_bin(Filter0),
+    Filter1 = fuse8:from_bin(Bin0),
+    ?assertEqual(true, fuse8:contain(Filter1, 4)),
+
+    Filter2 = fuse8:new([1, 2, 3, 4]),
+    Bin1 = fuse8:to_bin(Filter2),
+    ?assertEqual(Bin0, Bin1).
