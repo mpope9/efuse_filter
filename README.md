@@ -118,7 +118,7 @@ Using your own hashing method has benefits. If the filter is sent between servic
 The `exor_filter` supports passing a function to do the hashing. This library does not.
 
 ## Serialization
-Functions are provided to the filter in binary form, instead of a nif reference. This can be useful to interop with other platforms / systems. The bin returned can be used with `fuse:contain` for ease of use. Example usage:
+Functions are provided to the filter in binary form, instead of a nif reference. This can be useful to interop with other platforms / systems. The bin returned can be used with `fuse8:contain` for ease of use. Example usage:
 
 ```erlang
 Filter     = fuse8:new(["test1", "test2", "test3"]),
