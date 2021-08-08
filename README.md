@@ -27,6 +27,8 @@ This was benchmarked with the [exor_benchmark](https://github.com/mpope9/exor_be
 
 This library requires Erlang version 24+.
 
+[This library is available on hex.pm](https://hex.pm/packages/efuse_filter).
+
 ### rebar3
 ```erlang
 %% rebar.config
