@@ -24,7 +24,10 @@
     contain/2,
     contain/3,
     add/2,
-    finalize/1
+    finalize/1,
+    to_bin/1,
+    from_bin/1,
+    from_bin/2
 ]).
 
 -record(fuse8, {
@@ -287,6 +290,48 @@ finalize(#fuse8{elements = Elements} = Filter) ->
         reference = FilterFun(List),
         elements = undefined
     }.
+
+
+%%-----------------------------------------------------------------------------
+%% @doc Serialize the filter to a binary
+%%
+%% Returns `binary()'.
+%% @end
+%%-----------------------------------------------------------------------------
+to_bin(#fuse8{reference = undefined}) ->
+    {error, uninitialized_filter};
+
+to_bin(#fuse8{reference = Reference}) ->
+    efuse_filter:fuse8_to_bin_nif(Reference).
+
+
+%%-----------------------------------------------------------------------------
+%% @doc Deserialize the filter from a previous `fuse8_to_bin' call. This
+%% will defines the filter to use the default hashing method.
+%%
+%% Returns `fuse8:fuse8'.
+%% @end
+%%-----------------------------------------------------------------------------
+from_bin(<<Binary/binary>>) ->
+    #fuse8{
+        reference = efuse_filter:fuse8_from_bin_nif(Binary),
+        hashing_method = default}.
+
+
+%%-----------------------------------------------------------------------------
+%% @doc Deserialize the filter from a previous `fuse8_to_bin' call. This
+%% will defines the filter to use custom hashing.
+%%
+%% Returns `fuse8:fuse8'.
+%% @end
+%%-----------------------------------------------------------------------------
+from_bin(<<Binary/binary>>, none) ->
+    #fuse8{
+        reference = efuse_filter:fuse8_from_bin_nif(Binary),
+        hashing_method = none};
+
+from_bin(_Binary, _) ->
+    {error, invalid_hash_method}.
 
 
 -spec over_100k(List::[term()]) -> boolean().
