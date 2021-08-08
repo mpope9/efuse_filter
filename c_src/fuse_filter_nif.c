@@ -244,9 +244,6 @@ fuse8_contain_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
    binary_fuse8_t* filter;
    if(!enif_get_resource(env, argv[0], fuse8_resource_type, (void**) &filter)) 
    {
-       // TODO: add serialization
-       return mk_error(env, "get_filter_error");
-       /*
        ErlNifBinary bin;
        if (!enif_inspect_binary(env, argv[0], &bin)) {
            return mk_error(env, "get_filter_for_contains_error");
@@ -256,16 +253,26 @@ fuse8_contain_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
            return mk_error(env, "get_filter_for_contains_bin_wrong_size");
        }
 
+       // Too long of lines without these...
+       size_t u64s = sizeof(uint64_t);
+       size_t u32s = sizeof(uint32_t);
+
        binary_fuse8_t stack_filter;
 
-       unpack_le_u64(&stack_filter.seed, bin.data);
-       unpack_le_u64(&stack_filter.blockLength, bin.data+sizeof(uint64_t));
+       unpack_le_u64(&stack_filter.Seed, bin.data);
+       unpack_le_u32(&stack_filter.SegmentLength, bin.data + u64s);
+       unpack_le_u32(&stack_filter.SegmentLengthMask, bin.data + u64s + u32s);
+       unpack_le_u32(&stack_filter.SegmentCount, bin.data + u64s + (u32s * 2));
+       unpack_le_u32(&stack_filter.SegmentCountLength, bin.data + u64s + (u32s * 3));
+       unpack_le_u32(&stack_filter.ArrayLength, bin.data + u64s + (u32s * 4));
 
-       if (bin.size != (sizeof(uint64_t)*2) + (stack_filter.blockLength * 3)) {
+       if (bin.size != u64s + (u32s * 5) + (stack_filter.ArrayLength)) {
            return mk_error(env, "get_filter_for_contains_bin_wrong_size");
        }
-       stack_filter.fingerprints = bin.data + (sizeof(uint64_t) * 2);
-       if(fuse8_contain(key, &stack_filter))
+
+       stack_filter.Fingerprints = bin.data + u64s + (u32s * 5);
+
+       if(binary_fuse8_contain(key, &stack_filter))
        {
            return mk_atom(env, "true");
        }
@@ -273,7 +280,6 @@ fuse8_contain_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
        {
            return mk_atom(env, "false");
        }
-       */
    }
 
    if(binary_fuse8_contain(key, filter)) 

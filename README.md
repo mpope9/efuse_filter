@@ -5,7 +5,7 @@ A dependency free [Binary Fuse Filter](https://github.com/FastFilter/xor_singleh
 
 They're faster and smaller than Bloom, Cuckoo, and Xor filters.
 
-This library is API compatible with the [exor_filter](https://github.com/mpope9/exor_filter) library, and can be used as a replacement without too much hassle.
+This library is almost API compatible with the [exor_filter](https://github.com/mpope9/exor_filter) library, and can be used as a replacement without too much hassle.
 
 ## Table Of Contents
 * [Benchmarks](#benchmarks)
@@ -118,12 +118,26 @@ Using your own hashing method has benefits. If the filter is sent between servic
 The `exor_filter` supports passing a function to do the hashing. This library does not.
 
 ## Serialization
+Filters can be serialized using `fuse8:to_bin/1` and `fuse8:from_bin/1` and `fuse8:from_bin/2`.
+
 Functions are provided to the filter in binary form, instead of a nif reference. This can be useful to interop with other platforms / systems. The bin returned can be used with `fuse8:contain` for ease of use. Example usage:
 
+Example usage:
 ```erlang
 Filter     = fuse8:new(["test1", "test2", "test3"]),
 BinFilter  = fuse8:to_bin(Filter),
-true       = fuse8:contain(BinFilter, "test1").
+true       = fuse8:contain(BinFilter, "test1"),
+Filter2    = fuse8:from_bin(BinFilter),
+true       = fuse8:contain(Filter2, "test1").
+```
+
+To use custom hashing with a serialized filter, the following `fuse8:contain/4` method is provided:
+```erlang
+Filter     = fuse8:new(["test1", "test2", "test3"]),
+BinFilter  = fuse8:to_bin(Filter),
+true       = fuse8:contain(BinFilter, "test1", false, none),
+Filter2    = fuse8:from_bin(BinFilter, none),
+true       = fuse8:contain(Filter2, "test1").
 ```
 
 Build
