@@ -1,7 +1,7 @@
 efuse_filter
 ====
 
-A dependency free Binary Fuse Filter library.
+A dependency free [Binary Fuse Filter](https://github.com/FastFilter/xor_singleheader) Erlang NIF.
 
 They're faster and smaller than Bloom, Cuckoo, and Xor filters.
 
