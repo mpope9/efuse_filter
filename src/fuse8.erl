@@ -23,6 +23,7 @@
     new_empty/1,
     contain/2,
     contain/3,
+    contain/4,
     add/2,
     finalize/1,
     to_bin/1,
@@ -154,7 +155,7 @@ new_empty(_) ->
 %% A filter previously serialized by `to_bin' is allowed
 %% @end
 %%-----------------------------------------------------------------------------
--spec contain(Filter::fuse8:fuse8(), Key::term()) -> boolean().
+-spec contain(Filter::fuse8:fuse8() | binary(), Key::term()) -> term().
 
 contain(Filter, Key) ->
     contain(Filter, Key, false).
@@ -172,17 +173,24 @@ contain(Filter, Key) ->
 %%
 %% @end
 %%-----------------------------------------------------------------------------
--spec contain(Filter::fuse8:fuse8(), Key::term(), Default::term()) -> boolean().
+-spec contain(Filter::fuse8:fuse8() | binary(), Key::term(), Default::term()) 
+    -> true | term().
+
+contain(<<Filter/binary>>, Key, Default) ->
+    case efuse_filter:fuse8_contain_nif(Filter, erlang:phash2(Key)) of
+        true -> true;
+        false -> Default
+    end;
 
 contain(#fuse8{hashing_method = none}, Key, _Default)
     when not is_integer(Key) ->
 
-    false;
+    _Default;
 
 contain(#fuse8{reference = Filter}, _Key, _Default)
     when Filter == undefined ->
 
-    false;
+    _Default;
 
 contain(#fuse8{reference = Filter, hashing_method = none}, Key, Default)
     when is_integer(Key) ->
@@ -200,8 +208,36 @@ contain(#fuse8{reference = Filter, hashing_method = default}, Key, Default) ->
     end;
 
 contain(_Filter, _Key, _Default) ->
-    false.
+    _Default.
 
+
+%%-----------------------------------------------------------------------------
+%% @doc This function exists for testing if an element exists in a
+%% serialized filter with custom hashing.
+%% The first argument should be the pre-initialized and seralized filter.
+%% The second argument is the key that will be tested.
+%% The third arguement is returned instead of `false'.
+%% The fourth argument should be `none'.
+%%
+%% If an invalid filter is passed or if the key is not an integer and the 
+%% hashing method is set to `none' then false will be returned.
+%%
+%% @end
+%%-----------------------------------------------------------------------------
+-spec contain(Filter::binary(), Key::integer(), Default::term(), none)
+    -> term().
+
+contain(_Filter, Key, Default, none) when not is_integer(Key) ->
+    Default;
+
+contain(<<Filter/binary>>, Key, Default, none) ->
+    case efuse_filter:fuse8_contain_nif(Filter, Key) of
+        true -> true;
+        false -> Default
+    end;
+
+contain(_Filter, _Key, Default, _HashingMethod) ->
+    Default.
 
 %%-----------------------------------------------------------------------------
 %% @doc Adds elements to filter, and applys the default hashing mechanism if
