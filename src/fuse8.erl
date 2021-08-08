@@ -109,6 +109,7 @@ new(_List, _Method) ->
 
 %%-----------------------------------------------------------------------------
 %% @doc Initializes an empty filter. This should be filled incrementally.
+%% Do not modify the reutrn value of this function.
 %% @end
 %%-----------------------------------------------------------------------------
 -spec new_empty() -> fuse8:fuse8().
@@ -126,6 +127,7 @@ new_empty() ->
 %% If a value other than `none' is passed, then `{error, invalid_hash_method}'
 %% will be returned. Values passed to `fuse8:add/2' need to be pre-hashed as
 %% integers before adding to a filter returned by this function.
+%% Do not modify the return value of this function.
 %% @end
 %%-----------------------------------------------------------------------------
 -spec new_empty(atom()) -> fuse8:fuse8() | {error, atom()}.
