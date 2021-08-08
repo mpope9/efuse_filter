@@ -74,7 +74,7 @@ true =
 
 ### Incremental Initialization
 
-This builds a filter over multiple calls. Filters are immutable. Once filled, more elements cannot be added.
+This builds a filter over multiple calls. Filters are immutable. Once finalized, more elements cannot be added.
 
 The `exor_filter` stores elements using a compressed bitmap. This library uses the optimized Erlang `sets` version 2 module, and keeps them in Erlang memory. This library will have a higher memory footprint when initializing a filter incrementally compared to the `exor_filter`.
 
